@@ -1,2 +1,5 @@
 include ':app'
+include ':mqtt'
 rootProject.name = "mqttframework"
+
+

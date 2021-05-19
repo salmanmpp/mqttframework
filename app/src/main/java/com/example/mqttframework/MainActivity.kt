@@ -1,73 +1,91 @@
 package com.example.mqttframework
 
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.amazonaws.services.iot.client.AWSIotMessage
+import com.example.mqtt.MQTTStreamer
+import com.example.mqtt.listener.StreamerListener
+import com.example.mqtt.listener.SubscriberListener
 
 class MainActivity : AppCompatActivity() {
+
+    val TAG = "MainActivity"
+
+    lateinit var mqttStreamer: MQTTStreamer
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         connect()
     }
 
-    fun connect(){
-        println("hello world")
+    private fun connect() {
         val directory: String = filesDir.absolutePath
-        val mqttStreamer: MQTTStreamer = MQTTStreamer()
-        val listener:StreamerListener = object:StreamerListener{
-            override fun onConnection() {
-                println("successfully connected to AWS IOT")
-            }
-
-            override fun onConnectionFail() {
-                println("connection failed")
-            }
-
-            override fun onDisconnection() {
-                println("disconnected from aws iot")
-            }
-
-
-
-
-            override fun onPublishFail(topic: String) {
-                println("publish failed on "+topic)
-            }
-
-            override fun onPublishSuccess(topic: String) {
-                println("publish success on topic "+topic)
-            }
-
-            override fun onPublishTimeout(topic: String) {
-                println("publish timeout on topic "+topic)
-            }
-
-
-        }
-        println(directory)
-        mqttStreamer?.init(directory+"/certificate.pem.crt",directory+"/private.pem.key",directory+"/rootCA.pem","a3e4k5wgvqo4ep-ats.iot.us-east-2.amazonaws.com","test",100000,true,listener)
-        mqttStreamer?.connect()
-        val subscriberListener = object :SubscriberListener{
-            override fun onMessage(topic: String, message: String) {
-                println("message received "+message)
-            }
-
-            override fun onSubscribeFail(topic: String) {
-                println("subscriber fail on "+topic)
-            }
-
-            override fun onSubscribeSucces(topic: String) {
-                println("subscriber Success on "+topic)
-            }
-
-            override fun onSubscribeTimeout(topic: String) {
-               println("subscriber timeout on "+topic)
-            }
-
-        }
-        mqttStreamer?.subscribe(arrayOf("test/topic1"),subscriberListener)
-        //Thread.sleep(1000)
-        mqttStreamer?.publish("test/topic1","helloworld")
-
+        mqttStreamer = MQTTStreamer(
+            "$directory/certificate.pem.crt",
+            "$directory/private.pem.key",
+            "$directory/rootCA.pem",
+            "a3e4k5wgvqo4ep-ats.iot.us-east-2.amazonaws.com",
+            "test",
+            100000,
+            true,
+            getStreamListener()
+        )
+        //mqttStreamer.connect()
     }
+
+    fun callPublish(view: View) {
+        mqttStreamer.publish("test/topic1", "helloworld", getSubscriberListener())
+    }
+
+    fun callSubscribe(view: View) {
+        //val topics = arrayOf("test/topic1", "test/topic2", "test/topic3")
+        mqttStreamer.subscribe("test/topic1", getSubscriberListener())
+    }
+
+    private fun getStreamListener(): StreamerListener {
+        return object : StreamerListener {
+
+            override fun onConnectionSuccess() {
+                Log.d(TAG, "successfully connected to AWS IOT")
+            }
+
+            override fun onConnectionFailure() {
+                Log.d(TAG, "connection failed")
+            }
+
+            override fun onConnectionClosed() {
+                Log.d(TAG, "connection closed from aws iot")
+            }
+
+        }
+    }
+
+    private fun getSubscriberListener(): SubscriberListener {
+        return object : SubscriberListener {
+            override fun onMessage(message: AWSIotMessage) {
+                Log.d(TAG, "message received " + message.payload)
+            }
+
+            override fun onSuccess() {
+                Log.d(TAG, "subscriber Success on ")
+            }
+
+            override fun onFailure() {
+                Log.d(TAG, "subscriber fail on ")
+            }
+
+            override fun onTimeout() {
+                Log.d(TAG, "subscriber timeout on ")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mqttStreamer.disconnect()
+    }
+
 }

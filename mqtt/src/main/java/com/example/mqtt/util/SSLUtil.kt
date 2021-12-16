@@ -25,23 +25,15 @@ import javax.net.ssl.TrustManagerFactory
 object SSLUtil {
     @Throws(Exception::class)
     fun getSocketFactory(
-        caCrtFile: String?,
         crtFile: String?, keyFile: String?, password: String
     ): SSLSocketFactory {
         Security.addProvider(BouncyCastleProvider())
 
-        // load CA certificate
-        var caCert: X509Certificate? = null
-        val fis = FileInputStream(caCrtFile)
-        var bis = BufferedInputStream(fis)
         val cf = CertificateFactory.getInstance("X.509")
-        while (bis.available() > 0) {
-            caCert = cf.generateCertificate(bis) as X509Certificate
-            // System.out.println(caCert.toString());
-        }
+
 
         // load client certificate
-        bis = BufferedInputStream(FileInputStream(crtFile))
+        var bis = BufferedInputStream(FileInputStream(crtFile))
         var cert: X509Certificate? = null
         while (bis.available() > 0) {
             cert = cf.generateCertificate(bis) as X509Certificate
@@ -68,13 +60,6 @@ object SSLUtil {
         }
         pemParser.close()
 
-        // CA certificate is used to authenticate server
-        val caKs = KeyStore.getInstance(KeyStore.getDefaultType())
-        caKs.load(null, null)
-        caKs.setCertificateEntry("ca-certificate", caCert)
-        val tmf = TrustManagerFactory.getInstance("X509")
-        tmf.init(caKs)
-
         // client key and certificates are sent to server so it can authenticate
         // us
         val ks = KeyStore.getInstance(KeyStore.getDefaultType())
@@ -94,7 +79,7 @@ object SSLUtil {
 
         // finally, create SSL socket factory
         val context = SSLContext.getInstance("TLSv1.2")
-        context.init(kmf.keyManagers, tmf.trustManagers, null)
+        context.init(kmf.keyManagers, null, null)
         return context.socketFactory
     }
 }

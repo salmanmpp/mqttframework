@@ -14,17 +14,17 @@ class GatewayTopic(topic: String, private val listener: SubscriberListener) : AW
 
     override fun onSuccess() {
         super.onSuccess()
-        listener.onSuccess()
+        listener.onSuccess(topic)
     }
 
     override fun onFailure() {
         super.onFailure()
-        listener.onFailure()
+        listener.onFailure(topic)
     }
 
     override fun onTimeout() {
         super.onTimeout()
-        listener.onTimeout()
+        listener.onTimeout(topic)
     }
 
 }

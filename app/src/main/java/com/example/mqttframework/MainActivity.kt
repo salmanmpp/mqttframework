@@ -6,6 +6,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.amazonaws.services.iot.client.AWSIotMessage
 import com.example.mqtt.MQTTStreamer
+import com.example.mqtt.listener.PublishListener
 import com.example.mqtt.listener.StreamerListener
 import com.example.mqtt.listener.SubscriberListener
 
@@ -20,29 +21,38 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         connect()
     }
-
     private fun connect() {
-        val directory: String = filesDir.absolutePath
+        val clientId = "MSTEST10"
         mqttStreamer = MQTTStreamer(
-            "$directory/certificate.pem.crt",
-            "$directory/private.pem.key",
-            "$directory/rootCA.pem",
-            "a3e4k5wgvqo4ep-ats.iot.us-east-2.amazonaws.com",
-            "test",
+            PATH_TO_APP_DIR+"bootstrap-certificate.pem.crt",
+            PATH_TO_APP_DIR+"bootstrap-private.pem.key",
+            "a1tav0i47qrik6-ats.iot.ap-south-1.amazonaws.com",
+            clientId,
             100000,
             true,
             getStreamListener()
         )
-        //mqttStreamer.connect()
+        Log.d(TAG,"connecting to $clientId")
+        mqttStreamer.connect()
     }
 
     fun callPublish(view: View) {
-        mqttStreamer.publish("test/topic1", "helloworld", getSubscriberListener())
+            val payload = "{\n" +
+                    "\t\"eventType\": \"EG01\",\n" +
+                    "\t\"make\": \"HMDGlobal\",\n" +
+                    "\t\"model\": \"Nokia 2.4\"\n" +
+                    "}"
+            Log.d(TAG,"Publishing $payload")
+            mqttStreamer.publish("cloud/bootstrap",payload, getPublishListener())
     }
 
     fun callSubscribe(view: View) {
         //val topics = arrayOf("test/topic1", "test/topic2", "test/topic3")
-        mqttStreamer.subscribe("test/topic1", getSubscriberListener())
+        mqttStreamer.subscribe("gateway/MSTEST10/bootstrap", getSubscriberListener())
+
+    }
+    fun callDisconnect(view: View){
+        mqttStreamer.disconnect()
     }
 
     private fun getStreamListener(): StreamerListener {
@@ -66,26 +76,47 @@ class MainActivity : AppCompatActivity() {
     private fun getSubscriberListener(): SubscriberListener {
         return object : SubscriberListener {
             override fun onMessage(message: AWSIotMessage) {
-                Log.d(TAG, "message received " + message.payload)
+                Log.d(TAG, "message received " + message.stringPayload)
             }
 
-            override fun onSuccess() {
-                Log.d(TAG, "subscriber Success on ")
+            override fun onSuccess(topic:String) {
+                Log.d(TAG, "subscriber Success on $topic")
             }
 
-            override fun onFailure() {
-                Log.d(TAG, "subscriber fail on ")
+            override fun onFailure(topic:String) {
+                Log.d(TAG, "subscriber fail on $topic")
             }
 
-            override fun onTimeout() {
-                Log.d(TAG, "subscriber timeout on ")
+            override fun onTimeout(topic:String) {
+                Log.d(TAG, "subscriber timeout on $topic")
             }
+        }
+    }
+
+    private fun getPublishListener() : PublishListener{
+        return object : PublishListener{
+            override fun onSuccess(topic:String) {
+                Log.d(TAG,"publish success on $topic")
+            }
+
+            override fun onFailure(topic:String) {
+                Log.d(TAG,"publish failure on $topic")
+            }
+
+            override fun onTimeout(topic:String) {
+                Log.d(TAG,"publish timeout on $topic")
+            }
+
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         mqttStreamer.disconnect()
+    }
+
+    companion object {
+        const val PATH_TO_APP_DIR = "/storage/emulated/0/Mqtt_Test/"
     }
 
 }

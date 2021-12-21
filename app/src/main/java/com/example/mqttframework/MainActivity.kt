@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
         mqttStreamer = MQTTStreamer(
             PATH_TO_APP_DIR+"bootstrap-certificate.pem.crt",
             PATH_TO_APP_DIR+"bootstrap-private.pem.key",
-            "a1tav0i47qrik6-ats.iot.ap-south-1.amazonaws.com",
+            "hosturl",
             clientId,
             100000,
             true,
